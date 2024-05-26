@@ -26,24 +26,31 @@ echo "Device: $DEVICE" | tee -a "$LOG_FILE"
 # Create test directory if it doesn't exist
 mkdir -p "$TEST_DIR"
 
-# Create files with different creation dates
+# Create files with different dates
 for month in $(seq 0 $((TOTAL_MONTHS - 1))); do
   for day in $(seq 1 $FILES_PER_MONTH); do
     # Calculate the date for each file
     FILE_DATE=$(date -d "-$((month * 30 + day)) days" "+%Y%m%d%H%M")
+    FILE_CREATION_DATE=$(date -d "-$((month * 30 + day)) days")
 
     # Create the file
     FILE_NAME="$TEST_DIR/file_$((month * FILES_PER_MONTH + day))"
     dd if=/dev/zero of="$FILE_NAME" bs=1M count=$FILE_SIZE_MB
 
     # Echo and log the file creation details
-    FILE_CREATION_DATE=$(date -d "-$((month * 30 + day)) days")
     echo "Creating file: $FILE_NAME with date: $FILE_CREATION_DATE" | tee -a "$LOG_FILE"
 
-    # Set the creation date using debugfs
+    # Set the modification and access dates using touch
     touch -d "-$((month * 30 + day)) days" "$FILE_NAME"
+
+    # Set the creation date using debugfs
     debugfs -w -R "set_inode_field $FILE_NAME crtime $FILE_DATE" "$DEVICE"
+    
+    # Set modification, access, and change dates using debugfs
+    debugfs -w -R "set_inode_field $FILE_NAME ctime $FILE_DATE" "$DEVICE"
+    debugfs -w -R "set_inode_field $FILE_NAME mtime $FILE_DATE" "$DEVICE"
+    debugfs -w -R "set_inode_field $FILE_NAME atime $FILE_DATE" "$DEVICE"
   done
 done
 
-echo "Test files created with varying creation dates spanning the last 7 months." | tee -a "$LOG_FILE"
+echo "Test files created with varying dates spanning the last $TOTAL_MONTHS months." | tee -a "$LOG_FILE"
