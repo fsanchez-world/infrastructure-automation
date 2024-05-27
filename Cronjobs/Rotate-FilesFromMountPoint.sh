@@ -12,9 +12,11 @@ DELETION_OBJECTIVE_THRESHOLD=65
 # Log file for recording actions
 LOG_FILE="/path/to/mount/point/rotate_log.log"
 
-# Function to check disk usage
-check_disk_usage() {
-    df -h "$MOUNT_POINT" | awk 'NR==2 {print $5}' | sed 's/%//'
+# Function to calculate disk usage percentage
+calculate_disk_usage_percentage() {
+    local total_space=$(df -h "$MOUNT_POINT" | awk 'NR==2 {print $2}' | sed 's/G//')
+    local used_space=$(du -sh "$MOUNT_POINT" | awk '{print $1}' | sed 's/G//')
+    echo $(awk -v used="$used_space" -v total="$total_space" 'BEGIN { printf "%.0f", (used / total) * 100 }')
 }
 
 # Function to delete oldest files
@@ -28,8 +30,8 @@ echo "--------------------" >> $LOG_FILE
 echo "Rotation started at $(date)" >> $LOG_FILE
 
 # Check if current disk usage exceeds the threshold
-if [ $(check_disk_usage) -ge $THRESHOLD ]; then
-    while [ $(check_disk_usage) -ge $DELETION_OBJECTIVE_THRESHOLD ]; do
+if [ $(calculate_disk_usage_percentage) -ge $THRESHOLD ]; then
+    while [ $(calculate_disk_usage_percentage) -ge $DELETION_OBJECTIVE_THRESHOLD ]; do
         OLDEST_FILE=$(find "$MOUNT_POINT" -type f -name "*.bak" -printf '%T+ %p\n' | sort | head -n 1 | awk '{print $2}')
         echo "Deleting $OLDEST_FILE" >> $LOG_FILE
         rm -f "$OLDEST_FILE"
