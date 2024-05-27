@@ -37,7 +37,7 @@ bytes_to_human_readable() {
 # Function to calculate disk usage percentage
 calculate_disk_usage_percentage() {
     local total_space_bytes=$(df --block-size=1 "$MOUNT_POINT" | awk 'NR==2 {print $2}')
-    local used_space_bytes=$(df --block-size=1 "$MOUNT_POINT" | awk 'NR==2 {print $3}')
+    local used_space_bytes=$(du -sb "$MOUNT_POINT" | awk '{print $1}')
     debug_log "Total space (bytes): $total_space_bytes ($(bytes_to_human_readable $total_space_bytes))"
     debug_log "Used space (bytes): $used_space_bytes ($(bytes_to_human_readable $used_space_bytes))"
     echo $(awk -v used="$used_space_bytes" -v total="$total_space_bytes" 'BEGIN { printf "%.0f", (used / total) * 100 }')
