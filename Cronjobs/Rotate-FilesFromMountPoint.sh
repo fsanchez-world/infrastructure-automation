@@ -12,6 +12,9 @@ DELETION_OBJECTIVE_THRESHOLD=65
 # Log file for recording actions
 LOG_FILE="/path/to/mount/point/rotate_log.log"
 
+# Dry run mode (set to true for dry run)
+DRY_RUN=true
+
 # Function to calculate disk usage percentage
 calculate_disk_usage_percentage() {
     local total_space=$(df -h "$MOUNT_POINT" | awk 'NR==2 {print $2}' | sed 's/G//')
@@ -34,7 +37,11 @@ if [ $(calculate_disk_usage_percentage) -ge $THRESHOLD ]; then
     while [ $(calculate_disk_usage_percentage) -ge $DELETION_OBJECTIVE_THRESHOLD ]; do
         OLDEST_FILE=$(find "$MOUNT_POINT" -type f -name "*.bak" -printf '%T+ %p\n' | sort | head -n 1 | awk '{print $2}')
         echo "Deleting $OLDEST_FILE" >> $LOG_FILE
-        rm -f "$OLDEST_FILE"
+        if [ "$DRY_RUN" != "true" ]; then
+            rm -f "$OLDEST_FILE"
+        else
+            echo "Dry run: $OLDEST_FILE would be deleted" >> $LOG_FILE
+        fi
         sleep 1
     done
 fi
